@@ -1,0 +1,9 @@
+numpy=1.15.2
+scipy=1.1.0
+numba=0.39.0
+scikit-learn=0.20.0
+matplotlib=3.0.0
+pandas
+rpy2
+tensorflow
+tensorflow-probability
