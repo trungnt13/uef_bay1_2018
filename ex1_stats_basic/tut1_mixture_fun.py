@@ -39,7 +39,83 @@ np.random.seed(5218)
 # print("Cov(Y, Z):\n", np.cov(Y, Z))
 
 # ===========================================================================
-# Ex4
+# Ex4 Correct answer
+# ===========================================================================
+def gmm(batch_size, n_clusters, n_dim, sigma0,
+        using_multivariate_normal=True):
+  """ This is the solution for the process in 1.3 """
+  # parameters for Dirichlet distribution
+  alpha = np.ones(shape=(n_clusters,))
+  print("Alpha:", alpha)
+  print("Sigma0:", sigma0)
+
+  # step: 1
+  dirichlet = tfd.Dirichlet(concentration=alpha)
+  theta = dirichlet.sample()
+
+  # step: 2
+  # ====== using multi-variate normal for generating components' mean ====== #
+  if using_multivariate_normal:
+    normal_1 = tfd.MultivariateNormalDiag(
+        loc=np.full(shape=(n_dim,), fill_value=0, dtype='float32'),
+        scale_diag=np.full(shape=(n_dim,), fill_value=sigma0, dtype='float32'))
+  # ====== using multiple Normal distribution instead ====== #
+  else:
+    normal_1 = tfd.Normal(
+        loc=np.full(shape=(n_dim,), fill_value=0, dtype='float32'),
+        scale=np.full(shape=(n_dim,), fill_value=sigma0, dtype='float32'))
+    normal_1 = tfd.Independent(normal_1, reinterpreted_batch_ndims=1)
+  # sampling `n_clusters` time, hence, mean for each cluster
+  mu_k = normal_1.sample(n_clusters) # (batch_size, n_clusters, n_dim)
+
+  # ====== Now for the assignment, need 1 indicator for each
+  # examples, hence we need `batch_size` amount of indicator
+  # (step: 3(a))====== #
+  categorical = tfd.OneHotCategorical(probs=theta)
+  z = categorical.sample(batch_size) # (batch_size, n_clusters)
+  z = tf.cast(z, tf.bool)
+
+  # ====== sampling the data points (step: 3(b)) ====== #
+  normal_2 = tfd.Normal(loc=mu_k, scale=1)
+  # this make each draw sample will generate sample for
+  # all 4 components
+  normal_2 = tfd.Independent(normal_2, reinterpreted_batch_ndims=2)
+  x_all_components = normal_2.sample(batch_size) # (batch_size, n_clusters, n_dim)
+
+  # ====== selecting the right component for each sample (step: 3(b)) ====== #
+  # (batch_size, n_clusters, n_dim) * (batch_size, n_clusters)
+  # = (batch_size, n_dim)
+  x = tf.boolean_mask(x_all_components, z)
+
+  return x.numpy(), np.argmax(z.numpy(), axis=-1)
+
+X1, Z1 = gmm(1000, n_clusters=4, n_dim=2, sigma0=2,
+             using_multivariate_normal=True)
+X2, Z2 = gmm(1000, n_clusters=4, n_dim=2, sigma0=10,
+             using_multivariate_normal=True)
+X3, Z3 = gmm(1000, n_clusters=4, n_dim=2, sigma0=2,
+             using_multivariate_normal=False)
+X4, Z4 = gmm(1000, n_clusters=4, n_dim=2, sigma0=10,
+             using_multivariate_normal=False)
+
+def plot_clusters(x, z, title):
+  # visualizing the mixture
+  import seaborn as sns
+  cluster_colors = sns.color_palette("hls", len(np.unique(Z1)))
+  plt.scatter(x[:, 0], x[:, 1], c=[cluster_colors[i] for i in z], s=6)
+  plt.title(str(title))
+
+plt.subplot(1, 4, 1)
+plot_clusters(X1, Z1, "Sigma:2  Multi-variate")
+plt.subplot(1, 4, 2)
+plot_clusters(X2, Z2, "Sigma:10 Multi-variate")
+plt.subplot(1, 4, 3)
+plot_clusters(X3, Z3, "Sigma:2  Normal")
+plt.subplot(1, 4, 4)
+plot_clusters(X4, Z4, "Sigma:10 Normal")
+
+# ===========================================================================
+# Ex4 Bonus
 # ===========================================================================
 # number of samples
 n_samples = 1000
@@ -99,7 +175,7 @@ def gmm(batch_size, n_clusters, n_dim):
   mu_k = normal_1.sample(batch_size) # (batch_size, n_clusters, n_dim)
 
   categorical = tfd.OneHotCategorical(probs=theta)
-  z = categorical.sample() # (batch_size, n_dim)
+  z = categorical.sample() # (batch_size, n_clusters)
   z = tf.cast(z, tf.bool)
 
   # another solution is using tf.where (but it is only
