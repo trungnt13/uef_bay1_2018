@@ -10,7 +10,8 @@ For Windows users, using github desktop may significantly simplify the process:
 
 ## Recommended reading
 
-#### [Think Bayes](http://www.greenteapress.com/thinkbayes/html/index.html)
+#### ["Think Bayes", Allen B. Downey](http://www.greenteapress.com/thinkbayes/html/index.html)
+#### ["Pattern Recognition and Machine Learning", Christopher M. Bishop](http://users.isr.ist.utl.pt/~wurmd/Livros/school/Bishop%20-%20Pattern%20Recognition%20And%20Machine%20Learning%20-%20Springer%20%202006.pdf)
 
 ## Setting up python environment using `miniconda`
 
